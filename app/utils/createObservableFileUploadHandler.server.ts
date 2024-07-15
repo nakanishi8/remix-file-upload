@@ -110,6 +110,7 @@ export type FileUploadHandlerOptions = {
   onDone?: (args: {
     name: string;
     filename: string;
+    filepath: string;
     contentType: string;
     uploadedBytes: number;
   }) => void;
@@ -212,7 +213,7 @@ export function createObservableFileUploadHandler({
     }
 
     if (onDone) {
-      onDone({ name, filename, contentType, uploadedBytes: size });
+      onDone({ name, filename, filepath, contentType, uploadedBytes: size });
     }
     // TODO: remove this typecast once TS fixed File class regression
     //  https://github.com/microsoft/TypeScript/issues/52166

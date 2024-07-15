@@ -11,7 +11,7 @@
  *
  */
 
-import { Index as ConfettiShower } from "confetti-react";
+import ReactConfetti from 'react-confetti'
 import { ClientOnly } from "remix-utils/client-only";
 
 export function Confetti({ id }: { id?: string | null }) {
@@ -20,7 +20,7 @@ export function Confetti({ id }: { id?: string | null }) {
   return (
     <ClientOnly>
       {() => (
-        <ConfettiShower
+        <ReactConfetti
           key={id}
           run={Boolean(id)}
           recycle={false}

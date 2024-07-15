@@ -31,6 +31,11 @@ import { redirectWithConfetti } from "~/utils/confetti.server.ts";
 import { createObservableFileUploadHandler } from "~/utils/createObservableFileUploadHandler.server.ts";
 import { useUploadProgress } from "~/utils/useUploadProgress.ts";
 
+// JSZipライブラリをインポート
+import JSZip from "jszip"
+import * as fs from "fs"
+import * as path from "path"
+
 type UploadProgressEvent = Readonly<{
   uploadId: string;
   name: string;
@@ -102,7 +107,7 @@ export async function action({ request }: ActionFunctionArgs) {
         percentageStatus: Math.floor((uploadedBytes * 100) / filesize),
       });
     },
-    onDone({ name, filename }) {
+    onDone({ name, filename, filepath }) {
       uploadEventBus.emit<UploadProgressEvent>({
         uploadId,
         name,
@@ -112,6 +117,38 @@ export async function action({ request }: ActionFunctionArgs) {
         uploadedKilobytes: filesizeInKilobytes,
         percentageStatus: 100,
       });
+
+      // ZIPファイルを読み込む
+      fs.readFile(filepath, async (err: Error| null, data:Buffer) => {
+        if (err) throw err;
+
+        // JSZipでZIPファイルを読み込む
+        const zip = await JSZip.loadAsync(data);
+
+        // 解凍用のディレクトリを作成
+        const destDir = filepath.replace(/\.zip$/, '');
+        fs.mkdirSync(destDir, { recursive: true });
+
+        // ZIPファイルの内容を展開する
+        Object.keys(zip.files).forEach(async (zipFilepath) => {
+          const file = zip.files[zipFilepath];
+          if (file.dir) return;
+          // ファイルを解凍して保存
+          const content = await file.async("nodebuffer");
+          // 解凍先のファイルパスを生成
+          const outputPath = path.join(destDir, zipFilepath);
+          // outputPathからディレクトリパスを取得
+          const outputDir = path.dirname(outputPath);
+          // 必要に応じてディレクトリを作成
+          fs.mkdirSync(outputDir, { recursive: true });
+
+          fs.writeFile(outputPath, content, (err) => {
+            if (err) throw err;
+            console.log(`${outputPath} was extracted.`);
+          });
+        });
+      });
+
     },
   });
 
