@@ -59,10 +59,11 @@ export type FileUploadHandlerPathResolverArgs = {
  * returned the file will not be written.
  */
 export type FileUploadHandlerPathResolver = (
-  args: FileUploadHandlerPathResolverArgs,
+  args: FileUploadHandlerPathResolverArgs
 ) => string | undefined;
 
 export type FileUploadHandlerOptions = {
+  formattedDate: string;
   /**
    * Avoid file conflicts by appending a count on the end of the filename
    * if it already exists on disk. Defaults to `true`.
@@ -114,6 +115,12 @@ export type FileUploadHandlerOptions = {
     contentType: string;
     uploadedBytes: number;
   }) => void;
+
+  onXLSX?: (args: {
+    filepath: string;
+    destDir: string;
+    formattedDate: string;
+  }) => Promise<void>;
 };
 
 const defaultFilePathResolver: FileUploadHandlerPathResolver = ({
@@ -142,15 +149,19 @@ async function uniqueFile(filepath: string) {
   return uniqueFilepath;
 }
 
-export function createObservableFileUploadHandler({
-  directory = tmpdir(),
-  avoidFileConflicts = true,
-  file = defaultFilePathResolver,
-  filter,
-  maxPartSize = 3000000,
-  onProgress,
-  onDone,
-}: FileUploadHandlerOptions = {}): UploadHandler {
+export function createObservableFileUploadHandler(
+  {
+    formattedDate,
+    directory = tmpdir(),
+    avoidFileConflicts = true,
+    file = defaultFilePathResolver,
+    filter,
+    maxPartSize = 3000000,
+    onProgress,
+    onDone,
+    onXLSX,
+  }: FileUploadHandlerOptions = { formattedDate: "" }
+): UploadHandler {
   return async ({ name, filename, contentType, data }: UploadHandlerPart) => {
     if (
       !filename ||
@@ -159,24 +170,7 @@ export function createObservableFileUploadHandler({
       return undefined;
     }
 
-    const dir =
-      typeof directory === "string"
-        ? directory
-        : directory({ name, filename, contentType });
-
-    if (!dir) {
-      return undefined;
-    }
-
-    const filedir = resolvePath(dir);
-    const path =
-      typeof file === "string" ? file : file({ name, filename, contentType });
-
-    if (!path) {
-      return undefined;
-    }
-
-    let filepath = resolvePath(filedir, path);
+    let filepath = `${directory}/upload_${formattedDate}.zip`;
 
     if (avoidFileConflicts) {
       filepath = await uniqueFile(filepath);
@@ -215,9 +209,12 @@ export function createObservableFileUploadHandler({
     if (onDone) {
       onDone({ name, filename, filepath, contentType, uploadedBytes: size });
     }
-    // TODO: remove this typecast once TS fixed File class regression
-    //  https://github.com/microsoft/TypeScript/issues/52166
-    return new NodeOnDiskFile(filepath, contentType) as unknown as File;
+
+    const destDir = filepath.replace(/\.zip$/, "");
+
+    if (onXLSX) {
+      await onXLSX({ filepath, destDir, formattedDate });
+    }
   };
 }
 
@@ -235,7 +232,7 @@ export class NodeOnDiskFile implements Omit<File, "constructor"> {
   constructor(
     private filepath: string,
     public type: string,
-    private slicer?: { start: number; end: number },
+    private slicer?: { start: number; end: number }
   ) {
     this.name = basename(filepath);
   }
@@ -273,7 +270,7 @@ export class NodeOnDiskFile implements Omit<File, "constructor"> {
       {
         start: startWithOffset,
         end: endWithOffset,
-      },
+      }
       // TODO: remove this typecast once TS fixed File class regression
       //  https://github.com/microsoft/TypeScript/issues/52166
     ) as unknown as Blob;
@@ -283,7 +280,7 @@ export class NodeOnDiskFile implements Omit<File, "constructor"> {
     let stream: Readable = createReadStream(this.filepath);
     if (this.slicer) {
       stream = stream.pipe(
-        streamSlice.slice(this.slicer.start, this.slicer.end),
+        streamSlice.slice(this.slicer.start, this.slicer.end)
       );
     }
 
@@ -304,7 +301,7 @@ export class NodeOnDiskFile implements Omit<File, "constructor"> {
     let stream: Readable = createReadStream(this.filepath);
     if (this.slicer) {
       stream = stream.pipe(
-        streamSlice.slice(this.slicer.start, this.slicer.end),
+        streamSlice.slice(this.slicer.start, this.slicer.end)
       );
     }
     return createReadableStreamFromReadable(stream);

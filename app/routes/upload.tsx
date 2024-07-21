@@ -57,7 +57,7 @@ export default function Index() {
               className={({ isActive }) =>
                 cn(
                   "text-sm rounded-lg bg-muted py-2 px-4",
-                  isActive && "bg-black text-white",
+                  isActive && "bg-black text-white"
                 )
               }
             >
@@ -68,7 +68,7 @@ export default function Index() {
               className={({ isActive }) =>
                 cn(
                   "text-sm rounded-lg bg-muted py-2 px-4",
-                  isActive && "bg-black text-white",
+                  isActive && "bg-black text-white"
                 )
               }
             >

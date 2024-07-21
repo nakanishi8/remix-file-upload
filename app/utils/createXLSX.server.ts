@@ -29,7 +29,10 @@ const reInfoB: RegExp =
 const reInfoE: RegExp =
   /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \[(.*?)\] INFO  c.j.d.api.common.logging.AccessLog - {"fn":"E","ts":"(.*?)","te":.*?,"ip":".*?","ri":".*?","ht":"(.*?)","md":"(.*?)","cm":"(.+?)","st":(.*?),"tm":.*?,"cs":-1,"ca":-1}/;
 
-export const processJettyFiles = async (directory: string) => {
+export const processJettyFiles = async (
+  directory: string,
+  formattedDate: string
+) => {
   try {
     const entries = await fsPromises.readdir(directory, {
       withFileTypes: true,
@@ -39,10 +42,10 @@ export const processJettyFiles = async (directory: string) => {
       if (entry.isDirectory()) {
         if (entry.name === "jetty") {
           // jettyディレクトリが見つかった場合、そのディレクトリ内のファイルに対して処理を実行
-          await processFilesInJetty(entryPath);
+          await processFilesInJetty(entryPath, formattedDate);
         } else {
           // jettyディレクトリ以外の場合、再帰的に探索を続ける
-          await processJettyFiles(entryPath);
+          await processJettyFiles(entryPath, formattedDate);
         }
       }
     }
@@ -51,7 +54,10 @@ export const processJettyFiles = async (directory: string) => {
   }
 };
 
-export const processFilesInJetty = async (jettyDirectory: string) => {
+export const processFilesInJetty = async (
+  jettyDirectory: string,
+  formattedDate: string
+) => {
   try {
     let extractedPart = "";
     XLSX.set_fs(fs);
@@ -153,11 +159,7 @@ export const processFilesInJetty = async (jettyDirectory: string) => {
       XLSX.utils.book_append_sheet(workbook, worksheet, extractedPart);
     }
     const uploadPath = jettyDirectory.replace("/jetty", "");
-    const outputPath = `${uploadPath}_xlsx`;
-    const parts = uploadPath.split("/");
-    const lastPart = parts[parts.length - 1];
-    fs.mkdirSync(outputPath);
-    XLSX.writeFile(workbook, `${outputPath}/${lastPart}.xlsx`);
+    XLSX.writeFile(workbook, `${uploadPath}/${formattedDate}.xlsx`);
   } catch (err) {
     console.error("Error processing jetty files:", err);
   }

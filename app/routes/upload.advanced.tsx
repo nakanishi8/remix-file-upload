@@ -22,7 +22,7 @@ import {
   useResolvedPath,
   useSubmit,
 } from "@remix-run/react";
-
+import { format } from "date-fns";
 import { nanoid } from "nanoid";
 import { Card } from "~/components/ui/card.tsx";
 import { Progress } from "~/components/ui/progress.tsx";
@@ -84,9 +84,12 @@ export async function action({ request }: ActionFunctionArgs) {
     });
   }
 
+  const formattedDate = format(start, "yyyyMMdd_HHmmss");
+
   const filesizeInKilobytes = Math.floor(filesize / 1024);
 
   const observableFileUploadHandler = createObservableFileUploadHandler({
+    formattedDate,
     avoidFileConflicts: true,
     maxPartSize,
     onProgress({ name, filename, uploadedBytes }) {
@@ -108,7 +111,7 @@ export async function action({ request }: ActionFunctionArgs) {
         percentageStatus: Math.floor((uploadedBytes * 100) / filesize),
       });
     },
-    async onDone({ name, filename, filepath }) {
+    async onDone({ name, filename }) {
       uploadEventBus.emit<UploadProgressEvent>({
         uploadId,
         name,
@@ -118,52 +121,57 @@ export async function action({ request }: ActionFunctionArgs) {
         uploadedKilobytes: filesizeInKilobytes,
         percentageStatus: 100,
       });
+    },
+    async onXLSX({ filepath, destDir, formattedDate }) {
+      return new Promise<void>(async (resolve, reject) => {
+        // ZIPファイルを読み込む
+        fs.readFile(filepath, async (err: Error | null, data: Buffer) => {
+          if (err) throw err;
 
-      // ZIPファイルを読み込む
-      fs.readFile(filepath, async (err: Error | null, data: Buffer) => {
-        if (err) throw err;
+          try {
+            // JSZipでZIPファイルを読み込む
+            const zip = await JSZip.loadAsync(data);
 
-        // JSZipでZIPファイルを読み込む
-        const zip = await JSZip.loadAsync(data);
+            fs.mkdirSync(destDir, { recursive: true });
 
-        // 解凍用のディレクトリを作成
-        const destDir = filepath.replace(/\.zip$/, "");
-        // const xlsxDir = destDir + "_xlsx";
-        fs.mkdirSync(destDir, { recursive: true });
-        // fs.mkdirSync(xlsxDir);
+            // ZIPファイルの内容を展開する
+            const extractedFiles = await Promise.all(
+              Object.keys(zip.files).map(async (zipFilepath) => {
+                const file = zip.files[zipFilepath];
+                if (file.dir) return;
+                // ファイルを解凍して保存
+                const content = await file.async("nodebuffer");
+                // 解凍先のファイルパスを生成
+                const outputPath = path.join(destDir, zipFilepath);
+                // outputPathからディレクトリパスを取得
+                const outputDir = path.dirname(outputPath);
+                // 必要に応じてディレクトリを作成
+                fs.mkdirSync(outputDir, { recursive: true });
 
-        // ZIPファイルの内容を展開する
-        const extractedFiles = await Promise.all(
-          Object.keys(zip.files).map(async (zipFilepath) => {
-            const file = zip.files[zipFilepath];
-            if (file.dir) return;
-            // ファイルを解凍して保存
-            const content = await file.async("nodebuffer");
-            // 解凍先のファイルパスを生成
-            const outputPath = path.join(destDir, zipFilepath);
-            // outputPathからディレクトリパスを取得
-            const outputDir = path.dirname(outputPath);
-            // 必要に応じてディレクトリを作成
-            fs.mkdirSync(outputDir, { recursive: true });
-
-            return new Promise((resolve, reject) => {
-              fs.writeFile(outputPath, content, (err) => {
-                if (err) reject(err);
-                console.log(`${outputPath} was extracted.`);
-                resolve(outputPath);
-              });
-            });
-          })
-        );
-        // processJettyFiles関数を実行
-        await processJettyFiles(destDir);
+                return new Promise((resolve, reject) => {
+                  fs.writeFile(outputPath, content, (err) => {
+                    if (err) reject(err);
+                    console.log(`${outputPath} was extracted.`);
+                    resolve(outputPath);
+                  });
+                });
+              })
+            );
+            // processJettyFiles関数を実行
+            await processJettyFiles(destDir, formattedDate);
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        });
       });
     },
   });
 
   await unstable_parseMultipartFormData(request, observableFileUploadHandler);
+  console.log("Upload done.");
 
-  return redirectWithConfetti("/upload/done");
+  return redirectWithConfetti("/upload/done?formattedDate=" + formattedDate);
 }
 
 export default function AdvancedExample() {
@@ -199,19 +207,14 @@ export default function AdvancedExample() {
           }}
         >
           <label
-            htmlFor="the-file"
+            htmlFor="file"
             className="flex flex-col gap-2 items-center p-8 border-dashed rounded-lg border-slate-300 border-[1px]"
           >
             <UploadIcon className="w-8 h-8" />
             <p className="text-slate-500 text-sm">
               Select a file you want to upload.
             </p>
-            <input
-              id="the-file"
-              name="the-file"
-              type="file"
-              className="hidden"
-            />
+            <input id="file" name="file" type="file" className="hidden" />
           </label>
 
           <p className="text-center text-muted-foreground">

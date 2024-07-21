@@ -21,6 +21,7 @@
     "blob": "^0.1.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
+    "date-fns": "^3.6.0",
     "isbot": "^3.6.8",
     "jszip": "^3.10.1",
     "nanoid": "^5.0.3",
