@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { promises as fsPromises } from "fs";
 import XLSX from "xlsx";
+import { tmpdir } from "node:os";
 
 interface Thread {
   time: string;
@@ -158,8 +159,8 @@ export const processFilesInJetty = async (
       );
       XLSX.utils.book_append_sheet(workbook, worksheet, extractedPart);
     }
-    const uploadPath = jettyDirectory.replace("/jetty", "");
-    XLSX.writeFile(workbook, `${uploadPath}/${formattedDate}.xlsx`);
+    const directory = tmpdir();
+    XLSX.writeFile(workbook, `${directory}/upload_${formattedDate}/${formattedDate}.xlsx`);
   } catch (err) {
     console.error("Error processing jetty files:", err);
   }
