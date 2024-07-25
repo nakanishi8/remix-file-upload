@@ -17,6 +17,15 @@
             "request": "attach",
             "skipFiles": ["<node_internals>/**"],
             "type": "node"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Current File",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${file}"
         }
     ]
 }

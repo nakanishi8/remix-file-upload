@@ -22,13 +22,13 @@ interface Result {
     method: string;
     request: string;
     status: number | null;
+    delay?: number; // 遅延時間（秒）を追加
   };
 }
 
-const reInfoB: RegExp =
-  /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \[(.*?)\] INFO  c.j.d.api.common.logging.AccessLog - {"fn":"B","ts":"(.*?)","ip":".*?","ri":".*?","ht":"(.*?)","md":"(.*?)","cm":"(.+?)","tm":.*?,"cs":-1,"ca":-1}/;
-const reInfoE: RegExp =
-  /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \[(.*?)\] INFO  c.j.d.api.common.logging.AccessLog - {"fn":"E","ts":"(.*?)","te":.*?,"ip":".*?","ri":".*?","ht":"(.*?)","md":"(.*?)","cm":"(.+?)","st":(.*?),"tm":.*?,"cs":-1,"ca":-1}/;
+const reInfoB: RegExp = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \[(.*?)\] INFO  c.j.d.api.common.logging.AccessLog - {"fn":"B","ts":"(.*?)","ip":".*?","ri":".*?","ht":"(.*?)","md":"(.*?)","cm":"(.+?)","tm":.*?,"cs":-1,"ca":-1}/;
+
+const reInfoE: RegExp = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \[(.*?)\] INFO  c.j.d.api.common.logging.AccessLog - {"fn":"E","ts":"(.*?)","te":.*?,"ip":".*?","ri":".*?","ht":"(.*?)","md":"(.*?)","cm":"(.+?)","st":(.*?),"tm":.*?,"cs":-1,"ca":-1}/;
 
 export const processJettyFiles = async (
   directory: string,
@@ -83,8 +83,7 @@ export const processFilesInJetty = async (
       const infoEThreads: Thread[] = [];
 
       const lines = fs
-        .readFileSync(filePath, { encoding: "utf-8" })
-        .split("\n");
+        .readFileSync(filePath, { encoding: "utf-8" }).replace(/""/g, '"').split("\n");
       lines.forEach((line) => {
         const infoBMatch = reInfoB.exec(line);
         const infoEMatch = reInfoE.exec(line);
@@ -147,15 +146,24 @@ export const processFilesInJetty = async (
 
       // Excelファイルの作成
       const worksheet = XLSX.utils.json_to_sheet(
-        Object.values(results).map((entry) => ({
+        Object.values(results).map((entry) => {
+          let delay = null;
+          if (entry.start && entry.end) {
+            const startDate = new Date(entry.start);
+            const endDate = new Date(entry.end);
+            delay = (endDate.getTime() - startDate.getTime()) / 1000;
+          }
+          return {
           スレッド: entry.id,
           ホスト: entry.host,
           開始日時: entry.start,
           終了日時: entry.end,
+          遅延: delay,
           ステータス: entry.status,
           メソッド: entry.method,
           リクエスト: entry.request,
-        }))
+        };
+        })
       );
       XLSX.utils.book_append_sheet(workbook, worksheet, extractedPart);
     }
