@@ -31,6 +31,7 @@ import { redirectWithConfetti } from "~/utils/confetti.server.ts";
 import { createObservableFileUploadHandler } from "~/utils/createObservableFileUploadHandler.server.ts";
 import { useUploadProgress } from "~/utils/useUploadProgress.ts";
 import { processJettyFiles } from "~/utils/createXLSX.server.ts";
+import { useUpload } from "../utils/UploadContext";
 
 // JSZipライブラリをインポート
 import JSZip from "jszip";
@@ -122,7 +123,7 @@ export async function action({ request }: ActionFunctionArgs) {
         percentageStatus: 100,
       });
     },
-    async onXLSX({ filepath, destDir, formattedDate }) {
+    async onXLSX({ uploadFilename, filepath, destDir, formattedDate }) {
       return new Promise<void>(async (resolve, reject) => {
         // ZIPファイルを読み込む
         fs.readFile(filepath, async (err: Error | null, data: Buffer) => {
@@ -158,7 +159,7 @@ export async function action({ request }: ActionFunctionArgs) {
               })
             );
             // processJettyFiles関数を実行
-            await processJettyFiles(destDir, formattedDate);
+            await processJettyFiles(destDir, uploadFilename);
             resolve();
           } catch (error) {
             reject(error);
@@ -171,13 +172,14 @@ export async function action({ request }: ActionFunctionArgs) {
   await unstable_parseMultipartFormData(request, observableFileUploadHandler);
   console.log("Upload done.");
 
-  return redirectWithConfetti("/upload/done?formattedDate=" + formattedDate);
+  return redirectWithConfetti("/upload/done");
 }
 
 export default function AdvancedExample() {
   const submit = useSubmit();
   const loaderData = useLoaderData<typeof loader>();
   const currentPath = useResolvedPath(".");
+  const { setUploadFilename } = useUpload();
 
   const progress = useUploadProgress<UploadProgressEvent>(loaderData.uploadId);
 
@@ -204,6 +206,14 @@ export default function AdvancedExample() {
           action={`${currentPath.pathname}?uploadId=${loaderData.uploadId}`}
           onChange={(event) => {
             submit(event.currentTarget);
+            const target = event.target as HTMLInputElement;
+            if (target.files && target.files[0]) {
+              const uploadFilename = target.files[0].name.replace(
+                /\.[^/.]+$/,
+                ".xlsx"
+              );
+              setUploadFilename(uploadFilename);
+            }
           }}
         >
           <label

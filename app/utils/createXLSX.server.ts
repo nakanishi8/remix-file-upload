@@ -26,13 +26,15 @@ interface Result {
   };
 }
 
-const reInfoB: RegExp = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \[(.*?)\] INFO  c.j.d.api.common.logging.AccessLog - {"fn":"B","ts":"(.*?)","ip":".*?","ri":".*?","ht":"(.*?)","md":"(.*?)","cm":"(.+?)","tm":.*?,"cs":-1,"ca":-1}/;
+const reInfoB: RegExp =
+  /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \[(.*?)\] INFO  c.j.d.api.common.logging.AccessLog - {"fn":"B","ts":"(.*?)","ip":".*?","ri":".*?","ht":"(.*?)","md":"(.*?)","cm":"(.+?)","tm":.*?,"cs":-1,"ca":-1}/;
 
-const reInfoE: RegExp = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \[(.*?)\] INFO  c.j.d.api.common.logging.AccessLog - {"fn":"E","ts":"(.*?)","te":.*?,"ip":".*?","ri":".*?","ht":"(.*?)","md":"(.*?)","cm":"(.+?)","st":(.*?),"tm":.*?,"cs":-1,"ca":-1}/;
+const reInfoE: RegExp =
+  /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \[(.*?)\] INFO  c.j.d.api.common.logging.AccessLog - {"fn":"E","ts":"(.*?)","te":.*?,"ip":".*?","ri":".*?","ht":"(.*?)","md":"(.*?)","cm":"(.+?)","st":(.*?),"tm":.*?,"cs":-1,"ca":-1}/;
 
 export const processJettyFiles = async (
   directory: string,
-  formattedDate: string
+  uploadFilename: string
 ) => {
   try {
     const entries = await fsPromises.readdir(directory, {
@@ -41,12 +43,12 @@ export const processJettyFiles = async (
     for (let entry of entries) {
       const entryPath = path.join(directory, entry.name);
       if (entry.isDirectory()) {
-        if (entry.name === "jetty") {
+        if (entry.name === "jetty" && !entryPath.includes("__MACOSX")) {
           // jettyディレクトリが見つかった場合、そのディレクトリ内のファイルに対して処理を実行
-          await processFilesInJetty(entryPath, formattedDate);
+          await processFilesInJetty(entryPath, uploadFilename);
         } else {
           // jettyディレクトリ以外の場合、再帰的に探索を続ける
-          await processJettyFiles(entryPath, formattedDate);
+          await processJettyFiles(entryPath, uploadFilename);
         }
       }
     }
@@ -57,7 +59,7 @@ export const processJettyFiles = async (
 
 export const processFilesInJetty = async (
   jettyDirectory: string,
-  formattedDate: string
+  uploadFilename: string
 ) => {
   try {
     let extractedPart = "";
@@ -83,7 +85,9 @@ export const processFilesInJetty = async (
       const infoEThreads: Thread[] = [];
 
       const lines = fs
-        .readFileSync(filePath, { encoding: "utf-8" }).replace(/""/g, '"').split("\n");
+        .readFileSync(filePath, { encoding: "utf-8" })
+        .replace(/""/g, '"')
+        .split("\n");
       lines.forEach((line) => {
         const infoBMatch = reInfoB.exec(line);
         const infoEMatch = reInfoE.exec(line);
@@ -154,21 +158,21 @@ export const processFilesInJetty = async (
             delay = (endDate.getTime() - startDate.getTime()) / 1000;
           }
           return {
-          スレッド: entry.id,
-          ホスト: entry.host,
-          開始日時: entry.start,
-          終了日時: entry.end,
-          遅延: delay,
-          ステータス: entry.status,
-          メソッド: entry.method,
-          リクエスト: entry.request,
-        };
+            スレッド: entry.id,
+            ホスト: entry.host,
+            開始日時: entry.start,
+            終了日時: entry.end,
+            遅延: delay,
+            ステータス: entry.status,
+            メソッド: entry.method,
+            リクエスト: entry.request,
+          };
         })
       );
       XLSX.utils.book_append_sheet(workbook, worksheet, extractedPart);
     }
     const directory = tmpdir();
-    XLSX.writeFile(workbook, `${directory}/upload_${formattedDate}/${formattedDate}.xlsx`);
+    XLSX.writeFile(workbook, `${directory}/${uploadFilename}`);
   } catch (err) {
     console.error("Error processing jetty files:", err);
   }

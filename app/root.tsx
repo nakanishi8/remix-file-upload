@@ -12,6 +12,7 @@
  */
 
 import type { LoaderFunctionArgs } from "@remix-run/node";
+import { UploadProvider } from "./utils/UploadContext";
 
 import "~/styles/globals.css";
 
@@ -41,7 +42,7 @@ export function loader({ request }: LoaderFunctionArgs) {
     },
     {
       headers: combineHeaders(confettiHeaders),
-    },
+    }
   );
 }
 
@@ -62,7 +63,9 @@ export default function App() {
       </head>
       <body className="flex flex-col h-full">
         <div className="flex-1">
-          <Outlet />
+          <UploadProvider>
+            <Outlet />
+          </UploadProvider>
         </div>
         <ScrollRestoration />
         <Scripts />

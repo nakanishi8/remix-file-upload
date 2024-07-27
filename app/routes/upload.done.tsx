@@ -12,8 +12,8 @@
  */
 
 import { type MetaFunction } from "@remix-run/node";
-import { useSearchParams } from "@remix-run/react";
 import { useEffect } from "react";
+import { useUpload } from "~/utils/UploadContext";
 
 export const meta: MetaFunction = () => [
   {
@@ -22,14 +22,14 @@ export const meta: MetaFunction = () => [
 ];
 
 export default function UploadDone() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const formattedDate = searchParams.get("formattedDate");
+  const { uploadFilename } = useUpload();
 
   useEffect(() => {
     const fetchData = async () => {
-      const response = await fetch(`/download?formattedDate=${formattedDate}`, {
+      const response = await fetch("/download", {
         headers: {
           "X-Requested-With": "XMLHttpRequest",
+          "X-Upload-Filename": `${uploadFilename}`,
         },
       });
       if (!response.ok) {
@@ -39,16 +39,15 @@ export default function UploadDone() {
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = `${formattedDate}.xlsx`;
+      link.download = `${uploadFilename}.xlsx`;
 
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
     };
-    if (formattedDate) {
+    if (uploadFilename) {
       fetchData();
-      setSearchParams("");
     }
   }, []);
 

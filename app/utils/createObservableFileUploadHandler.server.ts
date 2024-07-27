@@ -117,6 +117,7 @@ export type FileUploadHandlerOptions = {
   }) => void;
 
   onXLSX?: (args: {
+    uploadFilename: string;
     filepath: string;
     destDir: string;
     formattedDate: string;
@@ -211,9 +212,10 @@ export function createObservableFileUploadHandler(
     }
 
     const destDir = filepath.replace(/\.zip$/, "");
+    const uploadFilename = filename.replace(/\.[^/.]+$/, ".xlsx");
 
     if (onXLSX) {
-      await onXLSX({ filepath, destDir, formattedDate });
+      await onXLSX({ uploadFilename, filepath, destDir, formattedDate });
     }
   };
 }
