@@ -30,13 +30,14 @@ import { uploadEventBus } from "~/utils/UploadEventBus.server.ts";
 import { redirectWithConfetti } from "~/utils/confetti.server.ts";
 import { createObservableFileUploadHandler } from "~/utils/createObservableFileUploadHandler.server.ts";
 import { useUploadProgress } from "~/utils/useUploadProgress.ts";
-import { processJettyFiles } from "~/utils/createXLSX.server.ts";
+import { processJettyFiles, processFile } from "~/utils/createXLSX.server.ts";
 import { useUpload } from "../utils/UploadContext";
 
-// JSZipライブラリをインポート
 import JSZip from "jszip";
 import * as fs from "fs";
 import * as path from "path";
+import * as ZIP_FILE from "is-zip-file";
+import XLSX from "xlsx";
 
 type UploadProgressEvent = Readonly<{
   uploadId: string;
@@ -123,49 +124,55 @@ export async function action({ request }: ActionFunctionArgs) {
         percentageStatus: 100,
       });
     },
-    async onXLSX({ uploadFilename, filepath, destDir, formattedDate }) {
-      return new Promise<void>(async (resolve, reject) => {
-        // ZIPファイルを読み込む
-        fs.readFile(filepath, async (err: Error | null, data: Buffer) => {
-          if (err) throw err;
+    async onXLSX({ uploadFilename, filepath, destDir }) {
+      if (ZIP_FILE.isZipSync(filepath)) {
+        return new Promise<void>(async (resolve, reject) => {
+          // ZIPファイルを読み込む
+          fs.readFile(filepath, async (err: Error | null, data: Buffer) => {
+            if (err) throw err;
 
-          try {
-            // JSZipでZIPファイルを読み込む
-            const zip = await JSZip.loadAsync(data);
+            try {
+              // JSZipでZIPファイルを読み込む
+              const zip = await JSZip.loadAsync(data);
 
-            fs.mkdirSync(destDir, { recursive: true });
+              fs.mkdirSync(destDir, { recursive: true });
 
-            // ZIPファイルの内容を展開する
-            const extractedFiles = await Promise.all(
-              Object.keys(zip.files).map(async (zipFilepath) => {
-                const file = zip.files[zipFilepath];
-                if (file.dir) return;
-                // ファイルを解凍して保存
-                const content = await file.async("nodebuffer");
-                // 解凍先のファイルパスを生成
-                const outputPath = path.join(destDir, zipFilepath);
-                // outputPathからディレクトリパスを取得
-                const outputDir = path.dirname(outputPath);
-                // 必要に応じてディレクトリを作成
-                fs.mkdirSync(outputDir, { recursive: true });
+              // ZIPファイルの内容を展開する
+              const extractedFiles = await Promise.all(
+                Object.keys(zip.files).map(async (zipFilepath) => {
+                  const file = zip.files[zipFilepath];
+                  if (file.dir) return;
+                  // ファイルを解凍して保存
+                  const content = await file.async("nodebuffer");
+                  // 解凍先のファイルパスを生成
+                  const outputPath = path.join(destDir, zipFilepath);
+                  // outputPathからディレクトリパスを取得
+                  const outputDir = path.dirname(outputPath);
+                  // 必要に応じてディレクトリを作成
+                  fs.mkdirSync(outputDir, { recursive: true });
 
-                return new Promise((resolve, reject) => {
-                  fs.writeFile(outputPath, content, (err) => {
-                    if (err) reject(err);
-                    console.log(`${outputPath} was extracted.`);
-                    resolve(outputPath);
+                  return new Promise((resolve, reject) => {
+                    fs.writeFile(outputPath, content, (err) => {
+                      if (err) reject(err);
+                      console.log(`${outputPath} was extracted.`);
+                      resolve(outputPath);
+                    });
                   });
-                });
-              })
-            );
-            // processJettyFiles関数を実行
-            await processJettyFiles(destDir, uploadFilename);
-            resolve();
-          } catch (error) {
-            reject(error);
-          }
+                })
+              );
+              // processJettyFiles関数を実行
+              await processJettyFiles(destDir, uploadFilename);
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          });
         });
-      });
+      } else {
+        XLSX.set_fs(fs);
+        const workbook = XLSX.utils.book_new();
+        await processFile(filepath, workbook, uploadFilename);
+      }
     },
   });
 

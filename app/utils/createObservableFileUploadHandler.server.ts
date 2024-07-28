@@ -120,7 +120,6 @@ export type FileUploadHandlerOptions = {
     uploadFilename: string;
     filepath: string;
     destDir: string;
-    formattedDate: string;
   }) => Promise<void>;
 };
 
@@ -155,7 +154,6 @@ export function createObservableFileUploadHandler(
     formattedDate,
     directory = tmpdir(),
     avoidFileConflicts = true,
-    file = defaultFilePathResolver,
     filter,
     maxPartSize = 3000000,
     onProgress,
@@ -215,7 +213,7 @@ export function createObservableFileUploadHandler(
     const uploadFilename = filename.replace(/\.[^/.]+$/, ".xlsx");
 
     if (onXLSX) {
-      await onXLSX({ uploadFilename, filepath, destDir, formattedDate });
+      await onXLSX({ uploadFilename, filepath, destDir });
     }
   };
 }

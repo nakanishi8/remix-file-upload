@@ -39,7 +39,7 @@ export default function UploadDone() {
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = `${uploadFilename}.xlsx`;
+      link.download = `${uploadFilename}`;
 
       document.body.appendChild(link);
       link.click();

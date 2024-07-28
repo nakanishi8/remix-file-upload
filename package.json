@@ -22,6 +22,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "date-fns": "^3.6.0",
+    "is-zip-file": "^1.0.2",
     "isbot": "^3.6.8",
     "jszip": "^3.10.1",
     "nanoid": "^5.0.3",
