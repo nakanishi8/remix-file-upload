@@ -12,18 +12,16 @@
  */
 
 import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
-
 import { FileIcon, InfoCircledIcon, UploadIcon } from "@radix-ui/react-icons";
-import { json, unstable_parseMultipartFormData } from "@remix-run/node";
+import { unstable_parseMultipartFormData, redirect } from "@remix-run/node";
 import {
   Form,
   Link,
-  useLoaderData,
   useResolvedPath,
+  useRouteLoaderData,
   useSubmit,
 } from "@remix-run/react";
 import { format } from "date-fns";
-import { nanoid } from "nanoid";
 import { Card } from "~/components/ui/card.tsx";
 import { Progress } from "~/components/ui/progress.tsx";
 import { uploadEventBus } from "~/utils/UploadEventBus.server.ts";
@@ -55,10 +53,8 @@ export const meta: MetaFunction = () => [
   },
 ];
 
-export function loader() {
-  const uploadId = nanoid();
-
-  return json({ uploadId });
+interface LoaderData {
+  uploadId: string;
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -179,38 +175,27 @@ export async function action({ request }: ActionFunctionArgs) {
   await unstable_parseMultipartFormData(request, observableFileUploadHandler);
   console.log("Upload done.");
 
-  return redirectWithConfetti("/upload/done");
+  return redirect("/upload/done");
 }
 
-export default function AdvancedExample() {
+export default function UploadAdvanced() {
   const submit = useSubmit();
-  const loaderData = useLoaderData<typeof loader>();
+  const { uploadId } = useRouteLoaderData("routes/upload") as LoaderData;
   const currentPath = useResolvedPath(".");
   const { setUploadFilename } = useUpload();
 
-  const progress = useUploadProgress<UploadProgressEvent>(loaderData.uploadId);
+  const progress = useUploadProgress<UploadProgressEvent>(uploadId);
 
   return (
     <section className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <h3 className="text-xl font-bold">Advanced Example</h3>
-        <p className="text-muted-foreground">
-          This example showcases an advanced implementation of an observable
-          file upload. It includes everything that the{" "}
-          <Link to="/upload/basic" className="text-pink-500 underline">
-            basic example
-          </Link>{" "}
-          offers, and it also provides additional features such as displaying
-          the uploaded bytes and estimating the remaining upload time.
-        </p>
-      </header>
+      <header className="flex flex-col gap-2"></header>
 
       <Card className="p-4 shadow-xl">
         <Form
           className="flex flex-col gap-4"
           method="POST"
           encType="multipart/form-data"
-          action={`${currentPath.pathname}?uploadId=${loaderData.uploadId}`}
+          action={`${currentPath.pathname}?uploadId=${uploadId}`}
           onChange={(event) => {
             submit(event.currentTarget);
             const target = event.target as HTMLInputElement;
@@ -222,6 +207,17 @@ export default function AdvancedExample() {
               setUploadFilename(uploadFilename);
             }
           }}
+          // onDrop={(event) => {
+          //   submit(event.currentTarget);
+          //   const target = event.target as HTMLInputElement;
+          //   if (target.files && target.files[0]) {
+          //     const uploadFilename = target.files[0].name.replace(
+          //       /\.[^/.]+$/,
+          //       ".xlsx"
+          //     );
+          //     setUploadFilename(uploadFilename);
+          //   }
+          // }}
         >
           <label
             htmlFor="file"
@@ -270,12 +266,6 @@ export default function AdvancedExample() {
           ) : null}
         </Form>
       </Card>
-
-      <p className="flex gap-2 text-xs text-muted-foreground items-center justify-center p-4">
-        <InfoCircledIcon className="w-4 h-4" />
-        Although the uploaded files are deleted after some time, please refrain
-        from uploading any sensitive files here.
-      </p>
     </section>
   );
 }

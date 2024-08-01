@@ -70,11 +70,7 @@ export default function App() {
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
-        <footer className="text-xs text-muted-foreground flex items-center justify-center py-4">
-          <Link to="https://andrekoenig.de">
-            Made by <span className="underline">André König</span>
-          </Link>
-        </footer>
+        <footer className="text-xs text-muted-foreground flex items-center justify-center py-4"></footer>
 
         <Confetti id={loaderData.confettiId} />
       </body>

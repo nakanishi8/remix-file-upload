@@ -14,5 +14,5 @@
 import { redirect } from "@remix-run/node";
 
 export function loader() {
-  return redirect("/upload/basic");
+  return redirect("/upload/advanced");
 }
