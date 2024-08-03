@@ -11,7 +11,8 @@
  *
  */
 
-import { Link, Outlet, json } from "@remix-run/react";
+import { Link, Outlet } from "@remix-run/react";
+import { json } from "@remix-run/node";
 import { Separator } from "~/components/ui/separator.tsx";
 import { nanoid } from "nanoid";
 

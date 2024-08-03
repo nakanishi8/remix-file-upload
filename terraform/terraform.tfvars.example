@@ -1,0 +1,6 @@
+# AWS EC2
+key_name             = "nakanishi_keypair"
+ami                  = "ami-092957e65e64cc357"
+subnet_id            = "default"
+security_group_ids   = ["default"]
+private_key          = "nakanishi_keypair.pem"
