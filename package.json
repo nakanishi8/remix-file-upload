@@ -7,7 +7,7 @@
     "build": "vite build && vite build --ssr",
     "dev": "vite dev",
     "lint": "biome check app --apply",
-    "start": "remix-serve ./build/index.js",
+    "start": "remix-serve ./build/server/index.js",
     "typecheck": "tsc"
   },
   "dependencies": {

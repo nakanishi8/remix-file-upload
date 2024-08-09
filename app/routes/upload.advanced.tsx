@@ -25,7 +25,6 @@ import { format } from "date-fns";
 import { Card } from "~/components/ui/card.tsx";
 import { Progress } from "~/components/ui/progress.tsx";
 import { uploadEventBus } from "~/utils/UploadEventBus.server.ts";
-import { redirectWithConfetti } from "~/utils/confetti.server.ts";
 import { createObservableFileUploadHandler } from "~/utils/createObservableFileUploadHandler.server.ts";
 import { useUploadProgress } from "~/utils/useUploadProgress.ts";
 import { processJettyFiles, processFile } from "~/utils/createXLSX.server.ts";
