@@ -5,3 +5,10 @@ node_modules
 /public/build
 /uploads
 .env
+.vercel
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+terraform.tfvars
+
